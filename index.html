@@ -2,73 +2,37 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>منچ فلزی</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>منچ ساده</title>
 <style>
-  body { 
-    background:#1a1a1a; /* رنگ پس‌زمینه سایت */
-    display:flex; flex-direction:column; align-items:center; 
-    margin:0; padding:20px; font-family:sans-serif; 
+  body { font-family: sans-serif; text-align: center; background: #eee; }
+  .grid { 
+    display: grid; grid-template-columns: repeat(15, 20px); 
+    justify-content: center; margin-top: 20px;
   }
-  
-  /* ایجاد افکت صفحه فلزی دایره‌ای */
-  .board { 
-    display:grid; grid-template-columns:repeat(15,1fr);
-    width:340px; height:340px; 
-    background: radial-gradient(circle, #555 0%, #333 70%, #111 100%);
-    border:6px solid #444; border-radius:50%; /* دایره‌ای شدن کل صفحه بازی */
-    padding:10px; gap:2px; box-shadow: 0 0 20px #000;
-  }
-
-  /* استایل هر حفره (دایره) */
-  .hole { 
-    background: #111; 
-    border-radius: 50%;
-    /* افکت حفره یا گودی */
-    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.9), 1px 1px 1px rgba(255,255,255,0.1);
-  }
-
-  /* رنگ‌بندی خانه‌های شروع (محل مهره‌ها) */
-  .base-red { background: #8b0000; }
-  .base-blue { background: #00008b; }
-  .base-green { background: #006400; }
-  .base-yellow { background: #8b8b00; }
-
-  .controls { margin-top:20px; color:#fff; text-align:center; }
-  #dice { font-size:40px; background:#fff; padding:10px; border-radius:10px; cursor:pointer; display:inline-block; }
+  .cell { width: 20px; height: 20px; border: 1px solid #ccc; background: #fff; }
+  .red { background: red; } .blue { background: blue; }
+  .green { background: green; } .yellow { background: yellow; }
+  button { margin-top: 20px; padding: 10px 20px; font-size: 18px; }
 </style>
 </head>
 <body>
+  <h3>بازی منچ</h3>
+  <div class="grid" id="board"></div>
+  <button onclick="alert('تاس: ' + (Math.floor(Math.random()*6)+1))">پرتاب تاس</button>
 
-<div class="board" id="gameBoard"></div>
-
-<div class="controls">
-  <div id="dice" onclick="roll()">🎲</div>
-  <p>برای پرتاب کلیک کنید</p>
-</div>
-
-<script>
-const board = document.getElementById('gameBoard');
-for(let i=0; i<225; i++) {
-  const div = document.createElement('div');
-  div.className = 'hole'; // همه حفره هستند
-  
-  const r = Math.floor(i/15);
-  const c = i%15;
-
-  // رنگ‌بندی مناطق شروع (مثل عکس)
-  if (r<6 && c<6) div.classList.add('base-red');
-  else if (r<6 && c>8) div.classList.add('base-green');
-  else if (r>8 && c<6) div.classList.add('base-blue');
-  else if (r>8 && c>8) div.classList.add('base-yellow');
-  
-  board.appendChild(div);
-}
-
-function roll() {
-  const n = Math.floor(Math.random()*6)+1;
-  document.getElementById('dice').innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][n-1];
-}
-</script>
+  <script>
+    const board = document.getElementById('board');
+    for(let i=0; i<225; i++) {
+      let cell = document.createElement('div');
+      cell.className = 'cell';
+      let r = Math.floor(i/15), c = i%15;
+      if(r<6 && c<6) cell.classList.add('red');
+      else if(r<6 && c>8) cell.classList.add('green');
+      else if(r>8 && c<6) cell.classList.add('blue');
+      else if(r>8 && c>8) cell.classList.add('yellow');
+      board.appendChild(cell);
+    }
+  </script>
 </body>
 </html>
