@@ -1,248 +1,267 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>بازی‌های سه‌بعدی</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
-    body {
-      background: radial-gradient(circle at center, #1e1e2f 0%, #0d0e15 100%);
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow-x: hidden;
-      padding: 10px;
-    }
-    .screen { display: none; width: 100%; max-width: 420px; flex-direction: column; align-items: center; }
-    .screen.active { display: flex; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>مار و پله و منچ</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; font-family:system-ui,sans-serif; user-select:none; -webkit-tap-highlight-color:transparent; }
+  body { background:#161512; color:#eee; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:10px; }
+  .screen { display:none; width:100%; max-width:420px; flex-direction:column; align-items:center; }
+  .screen.active { display:flex; }
+  h1 { font-size:18px; margin:8px 0; color:#e8d5b5; }
 
-    h1 { font-size: 20px; color: #f5c2e7; margin-bottom: 8px; text-shadow: 0 4px 10px rgba(245,194,231,0.3); }
+  .btn {
+    padding:11px 24px; border:none; border-radius:10px; font-size:15px; font-weight:bold;
+    background:#629924; color:#fff; margin:5px; box-shadow:0 4px 10px rgba(98,153,36,.35);
+    transition:transform .15s;
+  }
+  .btn:active { transform:scale(.95); }
+  .btn.gray { background:#3d3b38; box-shadow:none; }
+  .btn.menu { width:85%; padding:16px; font-size:17px; margin:8px; }
 
-    /* دکمه‌های شیشه‌ای مدرن */
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      color: #fff;
-      background: linear-gradient(135deg, #89b4fa, #74c7ec);
-      box-shadow: 0 6px 15px rgba(116, 199, 236, 0.35);
-      transition: all 0.2s ease;
-      margin: 6px;
-    }
-    .btn:active { transform: translateY(2px) scale(0.97); }
-    .btn-green { background: linear-gradient(135deg, #a6e3a1, #94e2d5); color: #11111b; box-shadow: 0 6px 15px rgba(166, 227, 161, 0.35); }
-    .btn-red { background: linear-gradient(135deg, #f38ba8, #eba0ac); color: #11111b; box-shadow: 0 6px 15px rgba(243, 139, 168, 0.35); }
-    .btn-back { background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); color: #cdd6f4; border: 1px solid rgba(255,255,255,0.1); }
+  /* نوار بازیکن مثل لیچس */
+  .player-bar {
+    width:340px; max-width:95vw;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 14px; border-radius:8px; margin:4px 0;
+    background:#262421; font-size:14px; font-weight:bold;
+  }
+  .player-bar.active { background:#3d3b38; box-shadow:0 0 0 2px #629924; }
 
-    /* نشانگر بازیکنان */
-    .players-bar { display: flex; gap: 10px; margin-bottom: 10px; }
-    .badge {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: bold;
-      opacity: 0.4;
-      border: 2px solid transparent;
-      transition: all 0.3s ease;
-    }
-    .badge.p1 { background: #f38ba8; color: #111; }
-    .badge.p2 { background: #89b4fa; color: #111; }
-    .badge.active { opacity: 1; border-color: #fff; transform: scale(1.08); box-shadow: 0 0 15px currentColor; }
+  #dice {
+    width:60px; height:60px; margin:8px 0; cursor:pointer;
+    background:linear-gradient(145deg,#fff,#ddd); color:#111;
+    font-size:34px; display:flex; align-items:center; justify-content:center;
+    border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.5);
+  }
+  #dice:active { transform:scale(.9); }
+  .msg { min-height:22px; font-size:14px; color:#e8d5b5; font-weight:bold; margin:4px 0; text-align:center; }
 
-    /* تاس سه بعدی */
-    .dice-container {
-      perspective: 600px;
-      margin: 8px 0;
-    }
-    .dice-3d {
-      width: 55px;
-      height: 55px;
-      background: linear-gradient(145deg, #ffffff, #e0e0e0);
-      color: #111;
-      font-size: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 14px;
-      cursor: pointer;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 2px 4px #fff, inset 0 -3px 6px rgba(0,0,0,0.2);
-      transform: rotateX(15deg) rotateY(-10deg);
-      transition: transform 0.2s ease;
-    }
-    .dice-3d:active { transform: scale(0.9) rotateX(0deg); }
-    .info-msg { font-size: 13px; color: #fab387; min-height: 20px; margin-bottom: 6px; font-weight: bold; }
+  /* ===== تخته مار و پله (۱۰۰ خانه) ===== */
+  .board100 {
+    display:grid; grid-template-columns:repeat(10,1fr);
+    width:340px; max-width:95vw; aspect-ratio:1;
+    border-radius:6px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,.6), 0 3px 0 #3a342c;
+    margin:6px 0;
+  }
+  .c100 {
+    position:relative; display:flex; align-items:flex-start; justify-content:flex-start;
+    font-size:8px; color:#8a7a63; padding:2px;
+  }
+  .c100:nth-child(odd)  { background:#f0d9b5; }
+  .c100:nth-child(even) { background:#b58863; }
+  .c100.snake   { background:#e8a0a0 !important; }
+  .c100.ladder  { background:#a0d8a0 !important; }
+  .c100.goal    { background:#f6c15c !important; font-weight:bold; color:#5a4500; }
+  .c100.hl      { box-shadow: inset 0 0 0 3px #f6f669; }
 
-    /* نمای سه بعدی پرسپکتیو برای تخته */
-    .board-viewport {
-      perspective: 900px;
-      width: 340px;
-      height: 340px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 10px auto;
-    }
-    .board-3d {
-      transform-style: preserve-3d;
-      transform: rotateX(32deg) rotateZ(0deg);
-      box-shadow: 0 25px 40px rgba(0,0,0,0.7), 0 10px 0 #11111b;
-      border-radius: 12px;
-      background: #181825;
-      padding: 4px;
-      border: 2px solid #313244;
-      transition: transform 0.4s ease;
-    }
+  /* ===== تخته منچ (۱۵×۱۵) ===== */
+  .board15 {
+    display:grid; grid-template-columns:repeat(15,1fr);
+    width:340px; max-width:95vw; aspect-ratio:1;
+    border-radius:6px; overflow:hidden;
+    box-shadow:0 8px 24px rgba(0,0,0,.6), 0 3px 0 #3a342c;
+    margin:6px 0; background:#f0d9b5;
+  }
+  .c15 { position:relative; background:#f0d9b5; }
+  .c15 path { background:#e0c9a0; }
+  .c15.red    { background:#e8a0a0; }
+  .c15.blue   { background:#a0bde8; }
+  .c15.center { background:#f6c15c; display:flex; align-items:center; justify-content:center; font-size:10px; }
 
-    /* تخته مار و پله */
-    .snake-table { border-collapse: collapse; }
-    .snake-table td {
-      width: 32px;
-      height: 32px;
-      border: 1px solid rgba(255,255,255,0.06);
-      position: relative;
-      font-size: 8px;
-      color: #6c7086;
-      vertical-align: top;
-      padding: 1px;
-      background: #1e1e2e;
-    }
-    td.snake-box { background: rgba(243, 139, 168, 0.22); color: #f38ba8; font-weight: bold; }
-    td.ladder-box { background: rgba(166, 227, 161, 0.22); color: #a6e3a1; font-weight: bold; }
-    td.goal-box { background: radial-gradient(circle, #f9e2af 0%, #fab387 100%); color: #111; font-weight: bold; }
-
-    /* مهره‌های سه‌بعدی با پایه سایه‌دار */
-    .p-token {
-      position: absolute;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) translateZ(8px);
-      box-shadow: 0 6px 8px rgba(0,0,0,0.8), inset 0 2px 3px rgba(255,255,255,0.8);
-      z-index: 5;
-    }
-    .token-p1 { background: radial-gradient(circle at 30% 30%, #ff7b93, #b81434); border: 1px solid #ffccd5; }
-    .token-p2 { background: radial-gradient(circle at 30% 30%, #89dceb, #1e66f5); border: 1px solid #c9ebff; }
-
-    /* تخته منچ */
-    .ludo-table { border-collapse: collapse; }
-    .ludo-table td {
-      width: 21px;
-      height: 21px;
-      border: 1px solid rgba(255,255,255,0.05);
-      position: relative;
-      background: #1e1e2e;
-    }
-    .base-red { background: rgba(243, 139, 168, 0.35) !important; }
-    .base-blue { background: rgba(137, 180, 250, 0.35) !important; }
-    .path-red { background: #f38ba8 !important; }
-    .path-blue { background: #89b4fa !important; }
-    .center-box { background: #f9e2af !important; text-align: center; font-size: 10px; line-height: 21px; }
-
-    .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-  </style>
+  /* مهره‌ها */
+  .tk {
+    position:absolute; width:60%; height:60%; border-radius:50%;
+    top:20%; left:20%;
+    box-shadow:0 2px 4px rgba(0,0,0,.6), inset 0 2px 3px rgba(255,255,255,.7);
+  }
+  .tk1 { background:radial-gradient(circle at 30% 30%, #ff8a9a, #c22); }
+  .tk2 { background:radial-gradient(circle at 30% 30%, #8ac0ff, #17c); }
+  .tk.split1 { left:8%; top:28%; width:48%; height:48%; }
+  .tk.split2 { left:46%; top:28%; width:48%; height:48%; }
+</style>
 </head>
 <body>
 
-<div id="screen-menu" class="screen active">
-  <h1 style="font-size: 24px; margin-bottom: 20px;">🎲 مینی‌اپ بازی‌های ۳ بعدی</h1>
-  <div style="display: flex; flex-direction: column; gap: 15px; width: 80%;">
-    <button class="btn btn-green" onclick="openGame('snake')">🐍 مار و پله ۳ بعدی</button>
-    <button class="btn btn-red" onclick="openGame('ludo')">🎲 منچ ۳ بعدی</button>
-  </div>
+<!-- منو -->
+<div id="scr-menu" class="screen active">
+  <h1 style="font-size:22px; margin:30px 0 25px;">🎲 بازی‌های رومیزی</h1>
+  <button class="btn menu" onclick="show('snake')">🐍 مار و پله</button>
+  <button class="btn menu" onclick="show('ludo')">🎲 منچ</button>
 </div>
 
 <!-- مار و پله -->
-<div id="screen-snake" class="screen">
-  <h1>🐍 مار و پله ۳ بعدی</h1>
-  <div class="players-bar">
-    <div id="sp-1" class="badge p1 active">بازیکن ۱ 🔴</div>
-    <div id="sp-2" class="badge p2">بازیکن ۲ 🔵</div>
-  </div>
-  <div class="dice-container" onclick="rollSnake()">
-    <div id="s-dice" class="dice-3d">🎲</div>
-  </div>
-  <div id="s-msg" class="info-msg">روی تاس بزنید!</div>
-  
-  <div class="board-viewport">
-    <div class="board-3d">
-      <table id="snake-grid" class="snake-table"></table>
-    </div>
-  </div>
-
-  <div class="btn-group">
-    <button class="btn btn-back" onclick="openMenu()">منو</button>
-    <button class="btn btn-back" onclick="resetSnake()">دوباره 🔄</button>
+<div id="scr-snake" class="screen">
+  <h1>🐍 مار و پله</h1>
+  <div class="player-bar" id="sb1"><span>🔴 بازیکن ۱</span><span id="sp1">خانه ۰</span></div>
+  <div id="dice" onclick="rollSnake()">🎲</div>
+  <div class="player-bar" id="sb2"><span>🔵 بازیکن ۲</span><span id="sp2">خانه ۰</span></div>
+  <div class="msg" id="smsg">روی تاس بزنید!</div>
+  <div class="board100" id="b100"></div>
+  <div>
+    <button class="btn gray" onclick="show('menu')">منو</button>
+    <button class="btn gray" onclick="resetSnake()">دوباره 🔄</button>
   </div>
 </div>
 
 <!-- منچ -->
-<div id="screen-ludo" class="screen">
-  <h1>🎲 منچ ۳ بعدی</h1>
-  <div class="players-bar">
-    <div id="lp-1" class="badge p1 active">بازیکن ۱ 🔴</div>
-    <div id="lp-2" class="badge p2">بازیکن ۲ 🔵</div>
-  </div>
-  <div class="dice-container" onclick="rollLudo()">
-    <div id="l-dice" class="dice-3d">🎲</div>
-  </div>
-  <div id="l-msg" class="info-msg">برای شروع ۶ بیاورید!</div>
-
-  <div class="board-viewport">
-    <div class="board-3d">
-      <table id="ludo-grid" class="ludo-table"></table>
-    </div>
-  </div>
-
-  <div class="btn-group">
-    <button class="btn btn-back" onclick="openMenu()">منو</button>
-    <button class="btn btn-back" onclick="resetLudo()">دوباره 🔄</button>
+<div id="scr-ludo" class="screen">
+  <h1>🎲 منچ</h1>
+  <div class="player-bar" id="lb1"><span>🔴 بازیکن ۱</span><span id="lp1s">خارج</span></div>
+  <div id="ldice" onclick="rollLudo()" style="width:60px;height:60px;margin:8px 0;cursor:pointer;background:linear-gradient(145deg,#fff,#ddd);color:#111;font-size:34px;display:flex;align-items:center;justify-content:center;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.5);">🎲</div>
+  <div class="player-bar" id="lb2"><span>🔵 بازیکن ۲</span><span id="lp2s">خارج</span></div>
+  <div class="msg" id="lmsg">برای شروع ۶ بیاورید!</div>
+  <div class="board15" id="b15"></div>
+  <div>
+    <button class="btn gray" onclick="show('menu')">منو</button>
+    <button class="btn gray" onclick="resetLudo()">دوباره 🔄</button>
   </div>
 </div>
 
 <script>
-if(window.Telegram && window.Telegram.WebApp){ Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
-
+if(window.Telegram && Telegram.WebApp){ Telegram.WebApp.ready(); Telegram.WebApp.expand(); }
 const DICE = {1:'⚀',2:'⚁',3:'⚂',4:'⚃',5:'⚄',6:'⚅'};
 
-function openGame(g){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  if(g === 'snake'){
-    document.getElementById('screen-snake').classList.add('active');
-    buildSnakeGrid();
-  } else {
-    document.getElementById('screen-ludo').classList.add('active');
-    buildLudoBoard();
-  }
-}
-
-function openMenu(){
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-menu').classList.add('active');
+function show(s){
+  document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
+  document.getElementById('scr-'+s).classList.add('active');
+  if(s==='snake') buildSnake();
+  if(s==='ludo') buildLudo();
 }
 
 /* ================= مار و پله ================= */
-const SNAKES = {16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78};
-const LADDERS = {1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100};
-let sPos = [0, 0], sTurn = 0, sDone = false;
+const SNAKES={16:6,47:26,49:11,56:53,62:19,64:60,87:24,93:73,95:75,98:78};
+const LADDERS={1:38,4:14,9:31,21:42,28:84,36:44,51:67,71:91,80:100};
+let sPos=[0,0], sTurn=0, sDone=false, sLast=-1;
 
-function cellNum(r, c) {
-  let b = 9 - r;
-  return b % 2 === 0 ? b * 10 + c + 1 : b * 10 + 10 - c;
+function cellNum(r,c){ let b=9-r; return b%2===0 ? b*10+c+1 : b*10+10-c; }
+
+function buildSnake(){
+  const b=document.getElementById('b100'); b.innerHTML='';
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++){
+    const n=cellNum(r,c);
+    const d=document.createElement('div');
+    d.className='c100'; d.id='sc'+n; d.innerText=n;
+    if(SNAKES[n]) d.classList.add('snake');
+    if(LADDERS[n]) d.classList.add('ladder');
+    if(n===100) d.classList.add('goal');
+    if(n===sLast) d.classList.add('hl');
+    b.appendChild(d);
+  }
+  renderSnake();
 }
+function renderSnake(){
+  document.querySelectorAll('.snk-tk').forEach(e=>e.remove());
+  sPos.forEach((p,i)=>{
+    if(p>0){
+      const cell=document.getElementById('sc'+p);
+      const t=document.createElement('div');
+      t.className='tk tk'+(i+1)+' snk-tk';
+      if(sPos[0]===sPos[1] && sPos[0]>0) t.classList.add('split'+(i+1));
+      cell.appendChild(t);
+    }
+  });
+  document.getElementById('sp1').innerText='خانه '+sPos[0];
+  document.getElementById('sp2').innerText='خانه '+sPos[1];
+  document.getElementById('sb1').classList.toggle('active', sTurn===0 && !sDone);
+  document.getElementById('sb2').classList.toggle('active', sTurn===1 && !sDone);
+}
+function rollSnake(){
+  if(sDone) return;
+  const d=Math.floor(Math.random()*6)+1;
+  document.getElementById('dice').innerText=DICE[d];
+  let cur=sPos[sTurn], msg='بازیکن '+(sTurn+1)+' عدد '+d+' آورد.';
+  if(cur+d<=100) cur+=d;
+  if(SNAKES[cur]){ cur=SNAKES[cur]; msg+=' 🐍 نیش مار!'; }
+  else if(LADDERS[cur]){ cur=LADDERS[cur]; msg+=' 🪜 نردبان!'; }
+  sPos[sTurn]=cur; sLast=cur;
+  renderSnake();
+  if(cur===100){
+    sDone=true;
+    document.getElementById('smsg').innerText='🏆 بازیکن '+(sTurn+1)+' برد!';
+    if(window.Telegram && Telegram.WebApp.sendData) Telegram.WebApp.sendData('🏆 بازیکن '+(sTurn+1)+' مار و پله را برد!');
+    return;
+  }
+  if(d!==6) sTurn=1-sTurn; else msg+=' (جایزه ۶!)';
+  document.getElementById('smsg').innerText=msg;
+}
+function resetSnake(){ sPos=[0,0]; sTurn=0; sDone=false; sLast=-1;
+  document.getElementById('dice').innerText='🎲';
+  document.getElementById('smsg').innerText='روی تاس بزنید!'; buildSnake(); }
 
-function buildSnakeGrid(){
-  const t = document.getElementById('snake-grid');
-  t.innerHTML = '';
-  for(let r=0; r<10; r++){
-    const tr = t.insertRow();
-    for(let c=0; c<10; c++){
+/* ================= منچ ================= */
+const TRACK=[[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6],[0,7],[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[6,9],[6,10],[6,11],[6,12],[6,13],[6,14],[7,14],[8,14],[8,13],[8,12],[8,11],[8,10],[8,9],[8,8],[9,8],[10,8],[11,8],[12,8],[13,8],[14,8],[14,7],[14,6],[13,6],[12,6],[11,6],[10,6],[9,6],[8,6],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],[7,0]];
+const HOME={0:[[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]],1:[[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]]};
+let lPos=[-1,-1], lTurn=0, lDone=false;
+
+function buildLudo(){
+  const b=document.getElementById('b15'); b.innerHTML='';
+  const onPath=(r,c)=>{
+    for(let i=0;i<TRACK.length;i++) if(TRACK[i][0]===r&&TRACK[i][1]===c) return true;
+    return false;
+  };
+  for(let r=0;r<15;r++) for(let c=0;c<15;c++){
+    const d=document.createElement('div');
+    d.className='c15';
+    if(r<6&&c<6 || r>8&&c>8) d.classList.add('red');
+    if(r<6&&c>8 || r>8&&c<6) d.classList.add('blue');
+    if(onPath(r,c)) d.style.background='#e0c9a0';
+    if(HOME[0].some(([x,y])=>x===r&&y===c)) d.classList.add('red');
+    if(HOME[1].some(([x,y])=>x===r&&y===c)) d.classList.add('blue');
+    if(r===7&&c===7){ d.classList.add('center'); d.innerText='🏆'; }
+    d.id='L_'+r+'_'+c;
+    b.appendChild(d);
+  }
+  renderLudo();
+}
+function renderLudo(){
+  document.querySelectorAll('.lud-tk').forEach(e=>e.remove());
+  for(let i=0;i<2;i++){
+    let rc;
+    if(lPos[i]===-1) rc = i===0 ? [2,2] : [2,12];
+    else if(lPos[i]<50) rc = TRACK[(i===0?0:13) + lPos[i]%52];
+    else if(lPos[i]<=55) rc = HOME[i][lPos[i]-50] || [7,7];
+    else rc=[7,7];
+    const cell=document.getElementById('L_'+rc[0]+'_'+rc[1]);
+    if(cell){
+      const t=document.createElement('div');
+      t.className='tk tk'+(i+1)+' lud-tk';
+      cell.appendChild(t);
+    }
+  }
+  document.getElementById('lp1s').innerText = lPos[0]===-1?'خارج':'خانه '+(lPos[0]+1);
+  document.getElementById('lp2s').innerText = lPos[1]===-1?'خارج':'خانه '+(lPos[1]+1);
+  document.getElementById('lb1').classList.toggle('active', lTurn===0 && !lDone);
+  document.getElementById('lb2').classList.toggle('active', lTurn===1 && !lDone);
+}
+function rollLudo(){
+  if(lDone) return;
+  const d=Math.floor(Math.random()*6)+1;
+  document.getElementById('ldice').innerText=DICE[d];
+  let msg='';
+  if(lPos[lTurn]===-1){
+    if(d===6){ lPos[lTurn]=0; msg='بازیکن '+(lTurn+1)+' وارد شد! 🎉'; }
+    else msg='بازیکن '+(lTurn+1)+' برای خروج ۶ می‌خواهد.';
+  } else {
+    lPos[lTurn]+=d;
+    msg='بازیکن '+(lTurn+1)+' حرکت کرد.';
+    if(lPos[lTurn]>=55){
+      lDone=true; renderLudo();
+      document.getElementById('lmsg').innerText='🏆 بازیکن '+(lTurn+1)+' برد!';
+      if(window.Telegram && Telegram.WebApp.sendData) Telegram.WebApp.sendData('🏆 بازیکن '+(lTurn+1)+' منچ را برد!');
+      return;
+    }
+  }
+  if(d!==6) lTurn=1-lTurn; else msg+=' (جایزه ۶!)';
+  document.getElementById('lmsg').innerText=msg;
+  renderLudo();
+}
+function resetLudo(){ lPos=[-1,-1]; lTurn=0; lDone=false;
+  document.getElementById('ldice').innerText='🎲';
+  document.getElementById('lmsg').innerText='برای شروع ۶ بیاورید!'; buildLudo(); }
+</script>
+</body>
+</html>
