@@ -3,101 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>بازی‌های رومیزی</title>
+<title>منچ</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; font-family:system-ui,sans-serif; user-select:none; }
-  body { background:#161512; color:#eee; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:10px; }
-  .screen { display:none; width:100%; max-width:420px; flex-direction:column; align-items:center; }
-  .screen.active { display:flex; }
-  h1 { font-size:20px; margin:10px 0; color:#e8d5b5; }
-  .btn { padding:12px 24px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; background:#629924; color:#fff; margin:5px; }
-  .board { display:grid; width:340px; max-width:95vw; aspect-ratio:1; margin:10px 0; border:2px solid #555; }
+  body { background:#161512; color:#eee; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:15px; }
   
-  /* استایل منچ */
+  .player-bar {
+    width:340px; max-width:95vw; display:flex; justify-content:space-between; align-items:center;
+    padding:10px 15px; border-radius:8px; margin:5px 0; background:#262421; font-weight:bold;
+  }
+  .player-bar.active { background:#3d3b38; box-shadow:0 0 0 2px #629924; }
+  
+  #dice {
+    width:70px; height:70px; margin:15px 0; cursor:pointer;
+    background:#fff; color:#111; font-size:40px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.5);
+  }
+
+  .board { 
+    display:grid; grid-template-columns:repeat(15,1fr);
+    width:340px; max-width:95vw; aspect-ratio:1; 
+    margin:15px 0; background:#e0c9a0; border:2px solid #555;
+  }
   .c15 { aspect-ratio:1; border:0.1px solid #777; }
   .red-zone { background:#c22; }
   .blue-zone { background:#17c; }
   .path { background:#fff; }
   .center { background:#f6c15c; display:flex; align-items:center; justify-content:center; }
   
-  /* استایل مار و پله */
-  .c100 { display:flex; align-items:center; justify-content:center; font-size:9px; color:#888; }
-  .c100:nth-child(odd) { background:#f0d9b5; }
-  .c100:nth-child(even) { background:#b58863; }
+  .btn-reset { padding:10px 20px; border-radius:6px; border:none; background:#3d3b38; color:#eee; font-weight:bold; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<!-- منوی اصلی -->
-<div id="scr-menu" class="screen active">
-  <h1>🎲 بازی‌های رومیزی</h1>
-  <button class="btn" onclick="show('snake')">🐍 مار و پله</button>
-  <button class="btn" onclick="show('ludo')">🎲 منچ</button>
-</div>
+<div class="player-bar" id="pb1"><span>🔴 بازیکن ۱</span><span id="st1">خارج</span></div>
+<div id="dice" onclick="rollDice()">🎲</div>
+<div class="player-bar" id="pb2"><span>🔵 بازیکن ۲</span><span id="st2">خارج</span></div>
 
-<!-- مار و پله -->
-<div id="scr-snake" class="screen">
-  <h1>🐍 مار و پله</h1>
-  <div class="board" id="b100" style="grid-template-columns:repeat(10,1fr)"></div>
-  <button class="btn" onclick="show('menu')">بازگشت به منو</button>
-</div>
+<div id="msg" style="margin:5px 0; color:#e8d5b5;">برای شروع ۶ بیاورید!</div>
 
-<!-- منچ -->
-<div id="scr-ludo" class="screen">
-  <h1>🎲 منچ</h1>
-  <div class="board" id="b15" style="grid-template-columns:repeat(15,1fr)"></div>
-  <button class="btn" onclick="show('menu')">بازگشت به منو</button>
-</div>
+<div class="board" id="b15"></div>
+
+<button class="btn-reset" onclick="resetGame()">شروع مجدد 🔄</button>
 
 <script>
 if(window.Telegram && Telegram.WebApp) Telegram.WebApp.ready();
+let pos=[-1,-1], turn=0;
 
-function show(s){
-  document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
-  document.getElementById('scr-'+s).classList.add('active');
-  if(s==='snake') buildSnake();
-  if(s==='ludo') buildLudo();
-}
-
-function buildSnake(){
-  const b=document.getElementById('b100'); b.innerHTML='';
-  for(let i=0; i<100; i++){
-    const d=document.createElement('div');
-    d.className='c100'; d.innerText=i+1;
-    b.appendChild(d);
-  }
-}
-
-function buildLudo(){
-  const b=document.getElementById('b15'); b.innerHTML='';
+function render(){
+  const b = document.getElementById('b15'); b.innerHTML='';
   const map = [
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0],
-    [3,3,3,3,3,3,3,4,3,3,3,3,3,3,3],
-    [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2]
+    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
+    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
+    [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0], [3,3,3,3,3,3,3,4,3,3,3,3,3,3,3], [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
+    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2]
   ];
   for(let r=0;r<15;r++) for(let c=0;c<15;c++){
-    const d=document.createElement('div');
-    d.className='c15';
+    const d=document.createElement('div'); d.className='c15';
     if(map[r][c]===1) d.classList.add('red-zone');
-    if(map[r][c]===2) d.classList.add('blue-zone');
-    if(map[r][c]===3) d.classList.add('path');
-    if(map[r][c]===4) { d.classList.add('center'); d.innerText='🏆'; }
+    else if(map[r][c]===2) d.classList.add('blue-zone');
+    else if(map[r][c]===3) d.classList.add('path');
+    else if(map[r][c]===4) { d.classList.add('center'); d.innerText='🏆'; }
     b.appendChild(d);
   }
+  document.getElementById('pb1').classList.toggle('active', turn===0);
+  document.getElementById('pb2').classList.toggle('active', turn===1);
+  document.getElementById('st1').innerText = pos[0]===-1 ? 'خارج' : 'خانه '+pos[0];
+  document.getElementById('st2').innerText = pos[1]===-1 ? 'خارج' : 'خانه '+pos[1];
 }
+
+function rollDice(){
+  const d = Math.floor(Math.random()*6)+1;
+  document.getElementById('dice').innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][d-1];
+  if(pos[turn] === -1){
+    if(d===6){ pos[turn]=0; document.getElementById('msg').innerText='وارد شد! 🎉'; }
+    else document.getElementById('msg').innerText='برای خروج ۶ می‌خواهد.';
+  } else {
+    pos[turn] += d;
+    document.getElementById('msg').innerText='حرکت کرد...';
+  }
+  if(d!==6) turn = 1-turn;
+  render();
+}
+function resetGame(){ pos=[-1,-1]; turn=0; render(); document.getElementById('dice').innerText='🎲'; }
+render();
 </script>
 </body>
 </html>
