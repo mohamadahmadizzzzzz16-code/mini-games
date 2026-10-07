@@ -3,93 +3,72 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>منچ</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>منچ فلزی</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; font-family:system-ui,sans-serif; user-select:none; }
-  body { background:#161512; color:#eee; display:flex; flex-direction:column; align-items:center; min-height:100vh; padding:15px; }
-  
-  .player-bar {
-    width:340px; max-width:95vw; display:flex; justify-content:space-between; align-items:center;
-    padding:10px 15px; border-radius:8px; margin:5px 0; background:#262421; font-weight:bold;
+  body { 
+    background:#1a1a1a; /* رنگ پس‌زمینه سایت */
+    display:flex; flex-direction:column; align-items:center; 
+    margin:0; padding:20px; font-family:sans-serif; 
   }
-  .player-bar.active { background:#3d3b38; box-shadow:0 0 0 2px #629924; }
   
-  #dice {
-    width:70px; height:70px; margin:15px 0; cursor:pointer;
-    background:#fff; color:#111; font-size:40px;
-    display:flex; align-items:center; justify-content:center;
-    border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,.5);
-  }
-
+  /* ایجاد افکت صفحه فلزی دایره‌ای */
   .board { 
     display:grid; grid-template-columns:repeat(15,1fr);
-    width:340px; max-width:95vw; aspect-ratio:1; 
-    margin:15px 0; background:#e0c9a0; border:2px solid #555;
+    width:340px; height:340px; 
+    background: radial-gradient(circle, #555 0%, #333 70%, #111 100%);
+    border:6px solid #444; border-radius:50%; /* دایره‌ای شدن کل صفحه بازی */
+    padding:10px; gap:2px; box-shadow: 0 0 20px #000;
   }
-  .c15 { aspect-ratio:1; border:0.1px solid #777; }
-  .red-zone { background:#c22; }
-  .blue-zone { background:#17c; }
-  .path { background:#fff; }
-  .center { background:#f6c15c; display:flex; align-items:center; justify-content:center; }
-  
-  .btn-reset { padding:10px 20px; border-radius:6px; border:none; background:#3d3b38; color:#eee; font-weight:bold; cursor:pointer; }
+
+  /* استایل هر حفره (دایره) */
+  .hole { 
+    background: #111; 
+    border-radius: 50%;
+    /* افکت حفره یا گودی */
+    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.9), 1px 1px 1px rgba(255,255,255,0.1);
+  }
+
+  /* رنگ‌بندی خانه‌های شروع (محل مهره‌ها) */
+  .base-red { background: #8b0000; }
+  .base-blue { background: #00008b; }
+  .base-green { background: #006400; }
+  .base-yellow { background: #8b8b00; }
+
+  .controls { margin-top:20px; color:#fff; text-align:center; }
+  #dice { font-size:40px; background:#fff; padding:10px; border-radius:10px; cursor:pointer; display:inline-block; }
 </style>
 </head>
 <body>
 
-<div class="player-bar" id="pb1"><span>🔴 بازیکن ۱</span><span id="st1">خارج</span></div>
-<div id="dice" onclick="rollDice()">🎲</div>
-<div class="player-bar" id="pb2"><span>🔵 بازیکن ۲</span><span id="st2">خارج</span></div>
+<div class="board" id="gameBoard"></div>
 
-<div id="msg" style="margin:5px 0; color:#e8d5b5;">برای شروع ۶ بیاورید!</div>
-
-<div class="board" id="b15"></div>
-
-<button class="btn-reset" onclick="resetGame()">شروع مجدد 🔄</button>
+<div class="controls">
+  <div id="dice" onclick="roll()">🎲</div>
+  <p>برای پرتاب کلیک کنید</p>
+</div>
 
 <script>
-if(window.Telegram && Telegram.WebApp) Telegram.WebApp.ready();
-let pos=[-1,-1], turn=0;
+const board = document.getElementById('gameBoard');
+for(let i=0; i<225; i++) {
+  const div = document.createElement('div');
+  div.className = 'hole'; // همه حفره هستند
+  
+  const r = Math.floor(i/15);
+  const c = i%15;
 
-function render(){
-  const b = document.getElementById('b15'); b.innerHTML='';
-  const map = [
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0], [3,3,3,3,3,3,3,4,3,3,3,3,3,3,3], [0,0,0,0,0,0,0,3,0,0,0,0,0,0,0],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2],
-    [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2], [1,1,1,1,1,1,0,3,0,2,2,2,2,2,2]
-  ];
-  for(let r=0;r<15;r++) for(let c=0;c<15;c++){
-    const d=document.createElement('div'); d.className='c15';
-    if(map[r][c]===1) d.classList.add('red-zone');
-    else if(map[r][c]===2) d.classList.add('blue-zone');
-    else if(map[r][c]===3) d.classList.add('path');
-    else if(map[r][c]===4) { d.classList.add('center'); d.innerText='🏆'; }
-    b.appendChild(d);
-  }
-  document.getElementById('pb1').classList.toggle('active', turn===0);
-  document.getElementById('pb2').classList.toggle('active', turn===1);
-  document.getElementById('st1').innerText = pos[0]===-1 ? 'خارج' : 'خانه '+pos[0];
-  document.getElementById('st2').innerText = pos[1]===-1 ? 'خارج' : 'خانه '+pos[1];
+  // رنگ‌بندی مناطق شروع (مثل عکس)
+  if (r<6 && c<6) div.classList.add('base-red');
+  else if (r<6 && c>8) div.classList.add('base-green');
+  else if (r>8 && c<6) div.classList.add('base-blue');
+  else if (r>8 && c>8) div.classList.add('base-yellow');
+  
+  board.appendChild(div);
 }
 
-function rollDice(){
-  const d = Math.floor(Math.random()*6)+1;
-  document.getElementById('dice').innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][d-1];
-  if(pos[turn] === -1){
-    if(d===6){ pos[turn]=0; document.getElementById('msg').innerText='وارد شد! 🎉'; }
-    else document.getElementById('msg').innerText='برای خروج ۶ می‌خواهد.';
-  } else {
-    pos[turn] += d;
-    document.getElementById('msg').innerText='حرکت کرد...';
-  }
-  if(d!==6) turn = 1-turn;
-  render();
+function roll() {
+  const n = Math.floor(Math.random()*6)+1;
+  document.getElementById('dice').innerText = ['⚀','⚁','⚂','⚃','⚄','⚅'][n-1];
 }
-function resetGame(){ pos=[-1,-1]; turn=0; render(); document.getElementById('dice').innerText='🎲'; }
-render();
 </script>
 </body>
 </html>
