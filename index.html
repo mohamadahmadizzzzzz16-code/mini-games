@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>مار و پله و منچ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: #181926;
+      color: #cad3f5;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 12px;
+    }
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 380px;
+      flex-direction: column;
+      align-items: center;
+    }
+    .screen.active {
+      display: flex;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 10px 0 16px 0;
+      color: #eed49f;
+    }
+    .menu-box {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 30px;
+    }
+    .btn {
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #181926;
+      background: #8aadf4;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    .btn:active {
+      transform: scale(0.97);
+    }
+    .btn-green { background: #a6da95; }
+    .btn-red { background: #ed8796; }
+    .btn-back {
+      background: #363a4f;
+      color: #cad3f5;
+      font-size: 14px;
+      padding: 10px 18px;
+    }
+    .players-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      opacity: 0.5;
+      border: 2px solid transparent;
+      color: #fff;
+    }
+    .badge.p1 { background: #ed8796; }
+    .badge.p2 { background: #8aadf4; }
+    .badge.active {
+      opacity: 1;
+      border-color: #eed49f;
+      box-shadow: 0 0 10px rgba(238, 212, 159, 0.4);
+    }
+    .dice {
+      width: 64px;
+      height: 64px;
+      background: #ffffff;
+      color: #181926;
+      font-size: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      margin: 8px auto;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .info-msg {
+      font-size: 14px;
+      color: #eed49f;
+      min-height: 24px;
+      margin: 6px 0;
+      font-weight: bold;
+    }
+
+    /* --- استایل تخته مار و پله --- */
+    table.snake-table {
+      border-collapse: collapse;
+      margin: 6px auto;
+      background: #24273a;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    table.snake-table td {
+      width: 32px;
+      height: 32px;
+      border: 1px solid #363a4f;
+      position: relative;
+      font-size: 10px;
+      color: #8087a2;
+      vertical-align: top;
+      padding: 1px;
+    }
+    td.snake-box { background: rgba(237, 135, 150, 0.25); }
+    td.ladder-box { background: rgba(166, 218, 149, 0.25); }
+    td.goal-box { background: rgba(238, 212, 159, 0.4); font-weight: bold; }
+    .p-token {
+      position: absolute;
+      bottom: 2px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1px solid #fff;
+    }
+    .token-p1 { background: #ed8796; left: 2px; }
+    .token-p2 { background: #8aadf4; right: 2px; }
+
+    /* --- منچ ساده --- */
+    .ludo-path {
+      width: 100%;
+      background: #24273a;
+      padding: 15px;
+      border-radius: 14px;
+      margin: 15px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .track {
+      background: #363a4f;
+      height: 22px;
+      border-radius: 11px;
+      position: relative;
+      overflow: hidden;
+    }
+    .track-bar {
+      height: 100%;
+      border-radius: 11px;
+      transition: width 0.3s;
+    }
+    .bar-p1 { background: #ed8796; }
+    .bar-p2 { background: #8aadf4; }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- صفحه انتخاب بازی -->
+  <div id="screen-menu" class="screen active">
+    <h1>🎲 مینی‌اپ بازی‌ها 🎲</h1>
+    <p style="color:#a5adcb; font-size:14px; margin-bottom: 20px;">یک بازی را انتخاب کنید:</p>
+    <div class="menu-box">
+      <button class="btn btn-green" onclick="openGame('snake')">🐍 مار و پله (کامل)</button>
+      <button class="btn btn-red" onclick="openGame('ludo')">🎲 منچ دونفره (مسابقه)</button>
+    </div>
+  </div>
+
+  <!-- بازی مار و پله -->
+  <div id="screen-snake" class="screen">
+    <h1>🐍 مار و پله</h1>
+    <div class="players-bar">
+      <div id="sp-1" class="badge p1 active">بازیکن ۱</div>
+      <div id="sp-2" class="badge p2">بازیکن ۲</div>
+    </div>
+    <div id="s-dice" class="dice" onclick="rollSnake()">🎲</div>
+    <div id="s-msg" class="info-msg">روی تاس بزنید!</div>
+    <table id="snake-grid" class="snake-table"></table>
+    <div class="btn-group">
+      <button class="btn btn-back" onclick="openMenu()">منو</button>
+      <button class="btn btn-back" onclick="resetSnake()">دوباره 🔄</button>
+    </div>
+  </div>
+
+  <!-- بازی منچ -->
+  <div id="screen-ludo" class="screen">
+    <h1>🎲 منچ (مسابقه سریع)</h1>
+    <div class="players-bar">
+      <div id="lp-1" class="badge p1 active">بازیکن ۱</div>
+      <div id="lp-2" class="badge p2">بازیکن ۲</div>
+    </div>
+    <div id="l-dice" class="dice" onclick="rollLudo()">🎲</div>
+    <div id="l-msg" class="info-msg">برای شروع ۶ بیاورید!</div>
+    
+    <div class="ludo-path">
+      <div style="text-align: right; font-size: 13px;">🔴 بازیکن ۱: <span id="l-txt-1">در خانه</span></div>
+      <div class="track"><div id="l-bar-1" class="track-bar bar-p1" style="width: 0%;"></div></div>
+      <div style="text-align: right; font-size: 13px;">🔵 بازیکن ۲: <span id="l-txt-2">در خانه</span></div>
+      <div class="track"><div id="l-bar-2" class="track-bar bar-p2" style="width: 0%;"></div></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-back" onclick="openMenu()">منو</button>
+      <button class="btn btn-back" onclick="resetLudo()">دوباره 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+
+    const DICE_ICONS = {1:'⚀', 2:'⚁', 3:'⚂', 4:'⚃', 5:'⚄', 6:'⚅'};
+
+    function openGame(game) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      if (game === 'snake') {
+        document.getElementById('screen-snake').classList.add('active');
+        buildSnakeGrid();
+      } else {
+        document.getElementById('screen-ludo').classList.add('active');
+        updateLudoUI();
+      }
+    }
+
+    function openMenu() {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-menu').classList.add('active');
+    }
+
+    /* ================= منطق مار و پله ================= */
+    const SNAKES = {16:6, 47:26, 49:11, 56:53, 62:19, 64:60, 87:24, 93:73, 95:75, 98:78};
+    const LADDERS = {1:38, 4:14, 9:31, 21:42, 28:84, 36:44, 51:67, 71:91, 80:100};
+    let sPos = [0, 0];
+    let sTurn = 0;
+    let sDone = false;
+
+    function cellNumber(r, c) {
+      let rowFromBottom = 9 - r;
+      return (rowFromBottom % 2 === 0) ? (rowFromBottom * 10 + c + 1) : (rowFromBottom * 10 + (10 - c));
+    }
+
+    function buildSnakeGrid() {
+      const table = document.getElementById('snake-grid');
+      table.innerHTML = '';
+      for (let r = 0; r < 10; r++) {
+        let tr = table.insertRow();
+        for (let c = 0; c < 10; c++) {
+          let num = cellNumber(r, c);
+          let td = tr.insertCell();
+          td.id = 'cell-' + num;
+          td.innerText = num;
+          if (SNAKES[num]) td.classList.add('snake-box');
+          if (LADDERS[num]) td.classList.add('ladder-box');
+          if (num === 100) td.classList.add('goal-box');
+        }
+      }
+      renderTokens();
+    }
+
+    function renderTokens() {
+      document.querySelectorAll('.p-token').forEach(el => el.remove());
+      if (sPos[0] > 0) {
+        let c = document.getElementById('cell-' + sPos[0]);
+        if (c) c.innerHTML += '<div class="p-token token-p1"></div>';
+      }
+      if (sPos[1] > 0) {
+        let c = document.getElementById('cell-' + sPos[1]);
+        if (c) c.innerHTML += '<div class="p-token token-p2"></div>';
+      }
+    }
+
+    function rollSnake() {
+      if (sDone) return;
+      let roll = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('s-dice').innerText = DICE_ICONS[roll];
+      
+      let cur = sPos[sTurn];
+      if (cur + roll <= 100) cur += roll;
+
+      let msg = 'بازیکن ' + (sTurn + 1) + ' عدد ' + roll + ' آورد.';
+      if (SNAKES[cur]) {
+        cur = SNAKES[cur];
+        msg += ' 🐍 نیش مار!';
+      } else if (LADDERS[cur]) {
+        cur = LADDERS[cur];
+        msg += ' 🪜 از نردبان بالا رفت!';
+      }
+      sPos[sTurn] = cur;
+      renderTokens();
+
+      if (cur === 100) {
+        sDone = true;
+        document.getElementById('s-msg').innerText = '🏆 بازیکن ' + (sTurn + 1) + ' برنده شد!';
+        return;
+      }
+
+      if (roll !== 6) sTurn = 1 - sTurn;
+      else msg += ' (جایزه ۶: دوباره تاس بزن)';
+
+      document.getElementById('sp-1').classList.toggle('active', sTurn === 0);
+      document.getElementById('sp-2').classList.toggle('active', sTurn === 1);
+      document.getElementById('s-msg').innerText = msg;
+    }
+
+    function resetSnake() {
+      sPos = [0, 0];
+      sTurn = 0;
+      sDone = false;
+      document.getElementById('s-dice').innerText = '🎲';
+      document.getElementById('s-msg').innerText = 'روی تاس بزنید!';
+      document.getElementById('sp-1').classList.add('active');
+      document.getElementById('sp-2').classList.remove('active');
+      buildSnakeGrid();
+    }
+
+    /* ================= منطق منچ ================= */
+    const LUDO_MAX = 30;
+    let lPos = [-1, -1];
+    let lTurn = 0;
+    let lDone = false;
+
+    function rollLudo() {
+      if (lDone) return;
+      let roll = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('l-dice').innerText = DICE_ICONS[roll];
+      let msg = '';
+
+      if (lPos[lTurn] === -1) {
+        if (roll === 6) {
+          lPos[lTurn] = 0;
+          msg = 'بازیکن ' + (lTurn + 1) + ' با ۶ وارد بازی شد! 🎯';
+        } else {
+          msg = 'بازیکن ' + (lTurn + 1) + ' ۶ نیاورد.';
+        }
+      } else {
+        lPos[lTurn] += roll;
+        if (lPos[lTurn] >= LUDO_MAX) {
+          lPos[lTurn] = LUDO_MAX;
+          lDone = true;
+          updateLudoUI();
+          document.getElementById('l-msg').innerText = '🏆 بازیکن ' + (lTurn + 1) + ' برنده بازی شد!';
+          return;
+        }
+        msg = 'بازیکن ' + (lTurn + 1) + ' به خانه ' + lPos[lTurn] + ' رسید.';
+      }
+
+      if (roll !== 6) lTurn = 1 - lTurn;
+      else msg += ' (جایزه ۶: دوباره)';
+
+      document.getElementById('lp-1').classList.toggle('active', lTurn === 0);
+      document.getElementById('lp-2').classList.toggle('active', lTurn === 1);
+      document.getElementById('l-msg').innerText = msg;
+      updateLudoUI();
+    }
+
+    function updateLudoUI() {
+      for (let i = 0; i < 2; i++) {
+        let pos = lPos[i];
+        let pct = pos === -1 ? 0 : (pos / LUDO_MAX) * 100;
+        document.getElementById('l-bar-' + (i + 1)).style.width = pct + '%';
+        document.getElementById('l-txt-' + (i + 1)).innerText = (pos === -1) ? 'در خانه' : (pos + ' از ' + LUDO_MAX);
+      }
+    }
+
+    function resetLudo() {
+      lPos = [-1, -1];
+      lTurn = 0;
+      lDone = false;
+      document.getElementById('l-dice').innerText = '🎲';
+      document.getElementById('l-msg').innerText = 'برای شروع ۶ بیاورید!';
+      document.getElementById('lp-1').classList.add('active');
+      document.getElementById('lp-2').classList.remove('active');
+      updateLudoUI();
+    }
+  </script>
+</body>
+</html>
